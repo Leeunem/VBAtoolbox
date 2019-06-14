@@ -1,0 +1,107 @@
+
+'----------------------------------------------------------------
+' Created by Leeunem the 14th of June, 2019
+' Version 1
+'
+' Below script is used to identify recent and aging emails
+'----------------------------------------------------------------
+
+'----------------------------------------------------------------
+' VARIABLES LIBRARY
+'----------------------------------------------------------------
+
+Public DataSheet As Worksheet
+Public PivotSheet As Worksheet
+Public RangeToColor As Range
+
+Public CheckDate As Long
+Public CellDate As Single
+Public i As Integer
+Public i2 As Integer
+Public lRow As Integer
+
+'----------------------------------------------------------------
+' SCRIPT
+'----------------------------------------------------------------
+
+Sub MailScan()
+
+'SetUp
+Set DataSheet = ActiveSheet
+DataSheet.Name = "Data"
+CheckDate = Date
+Cells(1, 7).Value = "Time Pending"
+Range("A1:G1").Interior.Color = RGB(192, 192, 192)
+lRow = Cells(Rows.Count, 1).End(xlUp).Row
+
+'Formatting
+For i = 2 To lRow
+Debug.Print i
+
+    Set RangeToColor = Range("A" & i & ":F" & i)
+    
+    
+    If IsDate(Cells(i, 3).Value) = True Then
+        CellDate = Cells(i, 3).Value
+    Else
+        GoTo Skip
+    End If
+    
+
+    Select Case CellDate
+        Case Is > CheckDate
+            RangeToColor.Interior.Color = RGB(60, 179, 113)
+            Cells(i, 7).Value = "Today"
+        Case CheckDate - 1 To CheckDate
+            RangeToColor.Interior.Color = RGB(60, 179, 113)
+            Cells(i, 7).Value = "Less than 2 days"
+        Case CheckDate - 3 To CheckDate - 1
+            RangeToColor.Interior.Color = RGB(255, 191, 0)
+            Cells(i, 7).Value = "Less than 4 days"
+        Case Is < CheckDate - 3
+            RangeToColor.Interior.Color = RGB(255, 0, 0)
+            Cells(i, 7).Value = "More or equal to 4 days"
+    End Select
+    
+
+Skip:
+Next i
+
+'Clean
+For i2 = 1 To 2
+    For i = 2 To lRow
+    If Cells(i, 7).Value = "" Then Rows(i).Delete
+    Next i
+Next i2
+
+Columns("A:A").EntireColumn.AutoFit
+Columns("C:G").EntireColumn.AutoFit
+
+'PivotGeneration
+    Sheets.Add
+    Set PivotSheet = ActiveSheet
+    PivotSheet.Name = "Pivot"
+    
+    ActiveWorkbook.PivotCaches.Create(SourceType:=xlDatabase, SourceData:= _
+        "Data!R1C1:R" & lRow & "C7", Version:=6).CreatePivotTable TableDestination:= _
+        "Pivot!R3C1", TableName:="MailScan", DefaultVersion:=6
+    
+    With PivotSheet.PivotTables("MailScan")
+            .PivotFields("Categories").Orientation = xlRowField
+            .PivotFields("Categories").Position = 1
+            .AddDataField ActiveSheet.PivotTables("MailScan").PivotFields("Time Pending"), "Count of Time Pending", xlCount
+            .PivotFields("Time Pending").Orientation = xlColumnField
+            .PivotFields("Time Pending").Position = 1
+    End With
+    
+    With PivotSheet.PivotTables("MailScan").PivotFields("Time Pending")
+        .PivotItems("Today").Position = 1
+        .PivotItems("Less than 2 days").Position = 2
+        .PivotItems("Less than 4 days").Position = 3
+        .PivotItems("More or equal to 4 days").Position = 4
+    End With
+
+Range("A3:F4").Interior.Color = RGB(192, 192, 192)
+Range("A" & Cells(Rows.Count, 1).End(xlUp).Row & ":F" & Cells(Rows.Count, 1).End(xlUp).Row).Interior.Color = RGB(192, 192, 192)
+    
+End Sub
