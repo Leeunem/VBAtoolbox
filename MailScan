@@ -1,106 +1,203 @@
 '----------------------------------------------------------------
-' Created by Leeunem the 14th of June, 2019
-' Version 1
+' Created by Sébastien Coureau (ADCGFL9) the 14th of June, 2019
+' Version 1.3
 '
 ' Below script is used to identify recent and aging emails
 '----------------------------------------------------------------
 
 '----------------------------------------------------------------
 ' VARIABLES LIBRARY
+'
+' Objects
+' Strings
+' Figures
 '----------------------------------------------------------------
 
 Public DataSheet As Worksheet
 Public PivotSheet As Worksheet
 Public RangeToColor As Range
 
+Public DataRange As String
+Public PivotName As String
+
 Public CheckDate As Long
 Public CellDate As Single
 Public i As Integer
+Public i_item As Integer
 Public i2 As Integer
 Public lRow As Integer
+Public lCol As Integer
+Public SubjectCol As Integer
+Public TimeCol As Integer
+Public CategorieCol As Integer
+Public PendingCol As Integer
 
 '----------------------------------------------------------------
 ' SCRIPT
 '----------------------------------------------------------------
 
-Sub MailScan()
+Public Sub MailScan()
 
 'SetUp
 Set DataSheet = ActiveSheet
 DataSheet.Name = "Data"
 CheckDate = Date
-Cells(1, 7).Value = "Time Pending"
-Range("A1:G1").Interior.Color = RGB(192, 192, 192)
+
 lRow = Cells(Rows.Count, 1).End(xlUp).Row
+lCol = Cells(1, Columns.Count).End(xlToLeft).Column
+
+'Downsizing to relevant data Recognition
+For i = 1 To lCol
+Debug.Print "Loop " & i
+Debug.Print "Column " & lCol
+
+    If Cells(1, i).Value = "Subject" Or Cells(1, i).Value = "Received" Or Cells(1, i).Value = "Categories" Then
+        Cells(1, i).Interior.Color = RGB(192, 192, 192)
+    Else:
+        If Cells(1, i).Value = "" Then Exit For
+        Columns(i).Delete
+        i = i - 1
+        lCol = lCol - 1
+    End If
+
+Next i
+
+Cells(1, lCol + 1).Value = "Time Pending"
+Cells(1, lCol + 1).Interior.Color = RGB(192, 192, 192)
+lCol = Cells(1, Columns.Count).End(xlToLeft).Column
+
+'Column identification
+Debug.Print "### Column identification ###"
+For i = 1 To lCol
+    If Cells(1, i).Value = "Subject" Then SubjectCol = i
+    If Cells(1, i).Value = "Received" Then TimeCol = i
+    If Cells(1, i).Value = "Categories" Then CategorieCol = i
+    If Cells(1, i).Value = "Time Pending" Then PendingCol = i
+Next i
 
 'Formatting
-For i = 2 To lRow
-Debug.Print i
+Debug.Print "### Formatting ###"
+Columns(SubjectCol).Select
+With Selection
+    .NumberFormat = "@"
+    .Replace What:="=", Replacement:="", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+End With
 
-    Set RangeToColor = Range("A" & i & ":F" & i)
+
+Columns(TimeCol).Select
+    With Selection
+    .Replace What:="Mon ", Replacement:="", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    .Replace What:="Tue ", Replacement:="", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    .Replace What:="Wed ", Replacement:="", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    .Replace What:="Thu ", Replacement:="", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    .Replace What:="Fri", Replacement:="", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    .Replace What:="Sat ", Replacement:="", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    .Replace What:="Sun ", Replacement:="", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    End With
     
+Debug.Print "### Aging Loop ignition ###"
+For i = 2 To lRow
+Debug.Print "Check row " & i
+
+    Set RangeToColor = Range(Cells(i, 1), Cells(i, lCol))
     
-    If IsDate(Cells(i, 3).Value) = True Then
-        CellDate = Cells(i, 3).Value
+    If IsDate(Cells(i, TimeCol).Value) = True Or IsTime(Cells(i, TimeCol)) = True Then
+        CellDate = Cells(i, TimeCol).Value
     Else
+        Cells(i, 1).Value = 1
         GoTo Skip
     End If
     
-
     Select Case CellDate
-        Case Is > CheckDate
+        Case Is = CheckDate
             RangeToColor.Interior.Color = RGB(60, 179, 113)
-            Cells(i, 7).Value = "Today"
+            Cells(i, lCol).Value = "Today"
+        Case CellDate > CheckDate
+            RangeToColor.Interior.Color = RGB(60, 179, 113)
+            Cells(i, lCol).Value = "Today"
         Case CheckDate - 1 To CheckDate
             RangeToColor.Interior.Color = RGB(60, 179, 113)
-            Cells(i, 7).Value = "Less than 2 days"
+            Cells(i, lCol).Value = "Less than 2 days"
         Case CheckDate - 3 To CheckDate - 1
             RangeToColor.Interior.Color = RGB(255, 191, 0)
-            Cells(i, 7).Value = "Less than 4 days"
+            Cells(i, lCol).Value = "Less than 4 days"
         Case Is < CheckDate - 3
             RangeToColor.Interior.Color = RGB(255, 0, 0)
-            Cells(i, 7).Value = "More or equal to 4 days"
+            Cells(i, lCol).Value = "More or equal to 4 days"
     End Select
     
-
 Skip:
 Next i
 
 'Clean
+Debug.Print "### Incorrect row Clearing double loops ###"
 For i2 = 1 To 2
     For i = 2 To lRow
-    If Cells(i, 7).Value = "" Then Rows(i).Delete
+        Debug.Print "Check row " & i
+        If Cells(i, 1).Value = 1 Then Rows(i).Delete
     Next i
 Next i2
 
-Columns("A:A").EntireColumn.AutoFit
-Columns("C:G").EntireColumn.AutoFit
+Columns(TimeCol).EntireColumn.AutoFit
+Columns(CategorieCol).EntireColumn.AutoFit
+Columns(PendingCol).EntireColumn.AutoFit
 
 'PivotGeneration
-    Sheets.Add
-    Set PivotSheet = ActiveSheet
-    PivotSheet.Name = "Pivot"
-    
+lRow = Cells(Rows.Count, 1).End(xlUp).Row
+lCol = Cells(1, Columns.Count).End(xlToLeft).Column
+Sheets.Add
+Set PivotSheet = ActiveSheet
+PivotSheet.Name = "Pivot"
+PivotName = "MailScan"
+
     ActiveWorkbook.PivotCaches.Create(SourceType:=xlDatabase, SourceData:= _
-        "Data!R1C1:R" & lRow & "C7", Version:=6).CreatePivotTable TableDestination:= _
-        "Pivot!R3C1", TableName:="MailScan", DefaultVersion:=6
+        "Data!R1C1:R" & lRow & "C" & lCol, Version:=6).CreatePivotTable TableDestination:= _
+        "Pivot!R3C1", TableName:=PivotName, DefaultVersion:=6
     
-    With PivotSheet.PivotTables("MailScan")
+    With PivotSheet.PivotTables(PivotName)
             .PivotFields("Categories").Orientation = xlRowField
             .PivotFields("Categories").Position = 1
-            .AddDataField ActiveSheet.PivotTables("MailScan").PivotFields("Time Pending"), "Count of Time Pending", xlCount
+            .AddDataField ActiveSheet.PivotTables(PivotName).PivotFields("Time Pending"), "Count of Time Pending", xlCount
             .PivotFields("Time Pending").Orientation = xlColumnField
             .PivotFields("Time Pending").Position = 1
-    End With
-    
-    With PivotSheet.PivotTables("MailScan").PivotFields("Time Pending")
-        .PivotItems("Today").Position = 1
-        .PivotItems("Less than 2 days").Position = 2
-        .PivotItems("Less than 4 days").Position = 3
-        .PivotItems("More or equal to 4 days").Position = 4
+            .TableStyle2 = "PivotStyleLight15"
     End With
 
-Range("A3:F4").Interior.Color = RGB(192, 192, 192)
-Range("A" & Cells(Rows.Count, 1).End(xlUp).Row & ":F" & Cells(Rows.Count, 1).End(xlUp).Row).Interior.Color = RGB(192, 192, 192)
+With PivotSheet.PivotTables("MailScan").PivotFields("Time Pending")
+.PivotItems("Today").Position = 1
+.PivotItems("Less than 2 days").Position = 2
+.PivotItems("Less than 4 days").Position = 3
+.PivotItems("More or equal to 4 days").Position = 4
+End With
+
+lCol = Cells(4, Columns.Count).End(xlToLeft).Column
+Range(Cells(3, 1), Cells(4, lCol)).Interior.Color = RGB(192, 192, 192)
+lRow = Cells(Rows.Count, 1).End(xlUp).Row
+Range(Cells(lRow, 1), Cells(lRow, lCol)).Interior.Color = RGB(192, 192, 192)
     
+For i = 2 To lCol - 1
+Cells(lRow + 1, i).Value = Cells(lRow, i).Value / Cells(lRow, lCol).Value
+Next i
+Rows(lRow + 1).NumberFormat = "0%"
+
 End Sub
+
+Function IsTime(Cell As Range) As Boolean
+  IsTime = (Len(Trim(Cell.Value)) > 0 And Cell.Value >= 0 And Cell.Value < 1)
+End Function
