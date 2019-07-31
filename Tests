@@ -1,0 +1,60 @@
+Sub PivotItemTest()
+
+   With PivotSheet.PivotTables("MailScan").PivotFields("Time Pending")
+    Pos = 0
+    For i = 0 To 6 '. PivotFields(strFieldName).PivotItems.Count
+        If .PivotItems(i) = "Today" Then
+            Pos = Pos + 1
+            .PivotItems("Today").Position = Pos
+        End If
+    
+        If .PivotItems(i) = "Less than 2 days" Then
+            Pos = Pos + 1
+            .PivotItems("Less than 2 days").Position = Pos
+        End If
+    
+        If .PivotItems(i) = "Less than 4 days" Then
+            Pos = Pos + 1
+            .PivotItems("Less than 4 days").Position = Pos
+        End If
+ 
+        If .PivotItems(i) = "More or equal to 4 days" Then
+            Pos = Pos + 1
+            .PivotItems("More or equal to 4 days").Position = Pos
+        End If
+    
+    Next i
+    End With
+
+
+End Sub
+Sub DynamicPosition()
+
+End Sub
+For i = 1 To 4
+    If PivotItemTest("Today", "Time Pending", PivotName) = True Then
+        PivotSheet.PivotTables(PivotName).PivotFields("Time Pending").PivotItems("Today").Position = i
+        GoTo Switchi
+    End If
+    If PivotItemTest("Less than 2 days", "Time Pending", PivotName) = True Then
+        PivotSheet.PivotTables(PivotName).PivotFields("Time Pending").PivotItems("Less than 2 days").Position = i
+        GoTo Switchi
+   End If
+    If PivotItemTest("Less than 4 days", "Time Pending", PivotName) = True Then
+        PivotSheet.PivotTables(PivotName).PivotFields("Time Pending").PivotItems("Less than 4 days").Position = i
+        GoTo Switchi
+    End If
+    If PivotItemTest("More or equal to 4 days", "Time Pending", PivotName) = True Then
+        PivotSheet.PivotTables(PivotName).PivotFields("Time Pending").PivotItems("More or equal to 4 days").Position = i
+        GoTo Switchi
+    End If
+Switchi:
+Next i
+End Sub
+
+
+Function PivotItemTest(ItemName As String, PivotField As String, PivotName As String) As Boolean
+    'For i_item = 1 To ActiveSheet.PivotTables(PivotName).PivotFields(PivotField).PivotItems.Count
+        If ActiveSheet.PivotTables(PivotName).PivotFields(PivotField).PivotItems(i).Name = ItemName Then PivotItemTest = True
+    'Next i_item
+End Function
